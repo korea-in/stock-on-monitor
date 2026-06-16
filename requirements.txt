@@ -1,0 +1,6 @@
+PyQt5==5.15.11
+yfinance==0.2.61
+FinanceDataReader==0.9.50
+pandas==2.2.2
+pywin32==310
+pyinstaller==6.13.0
