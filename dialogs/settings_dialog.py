@@ -144,18 +144,28 @@ class SettingsDialog(QDialog):
         g3.setSpacing(6)
 
         checks = [
-            ("show_code",       "종목코드"),
-            ("show_name",       "종목명"),
-            ("show_change_amt", "금일 변동액"),
-            ("show_change_pct", "금일 변동 %"),
-            ("show_profit_amt", "총액 변동"),
-            ("show_profit_pct", "총액 변동 %"),
-            ("show_total",      "총액"),
+            ("show_current_price", "현재가", True),  # (key, label, disabled)
+            ("show_code",       "종목코드", False),
+            ("show_name",       "종목명", False),
+            ("show_change_amt", "금일 변동액", False),
+            ("show_change_pct", "금일 변동 %", False),
+            ("show_profit_amt", "총액 변동", False),
+            ("show_profit_pct", "총액 변동 %", False),
+            ("show_total",      "총액", False),
         ]
         self.chk_map = {}
-        for i, (key, label) in enumerate(checks):
+        for i, item in enumerate(checks):
+            if len(item) == 3:
+                key, label, disabled = item
+            else:
+                key, label = item
+                disabled = False
+            
             c = QCheckBox(label)
             c.setChecked(self.cfg.get(key, False))
+            if disabled:
+                c.setEnabled(False)
+                c.setChecked(True)
             self.chk_map[key] = c
             g3.addWidget(c, i // 2, i % 2)
 

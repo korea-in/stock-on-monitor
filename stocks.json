@@ -14,5 +14,13 @@
     "buy_price": 40000.0,
     "quantity": 120,
     "active": true
+  },
+  {
+    "market": "KR",
+    "code": "000660",
+    "name": "SK하이닉스",
+    "buy_price": 500000.0,
+    "quantity": 40,
+    "active": true
   }
 ]

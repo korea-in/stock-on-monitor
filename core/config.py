@@ -37,6 +37,7 @@ def default_config() -> dict:
         "font_color"         : "#aaaaaa",   # 중간 회색
         "use_change_color"   : True,
         "invert_color"       : False,
+        "show_current_price" : True,
         "show_code"          : False,
         "show_name"          : False,
         "show_change_amt"    : False,

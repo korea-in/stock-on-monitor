@@ -95,6 +95,10 @@ class FloatingWidget(QWidget):
             self.stock_layout.addWidget(empty_widget)
             return
 
+        # 최대 종목명 길이 계산
+        max_name_len = max([len(s.get("name", "")) for s in self.stocks], default=4)
+        max_code_len = max([len(s.get("code", "")) for s in self.stocks], default=6)
+        
         for i, stock in enumerate(self.stocks):
             if i > 0:
                 line = QWidget()
@@ -111,12 +115,12 @@ class FloatingWidget(QWidget):
             fs = self.cfg.get("font_size", 9)
             fc = self.cfg.get("font_color", "#aaaaaa")
 
-            def make_lbl(size, bold=False, color=None):
+            def make_lbl(size, bold=False, color=None, min_width=45):
                 l = QLabel("--")
                 l.setFont(QFont("Malgun Gothic", fs,
                                 QFont.Bold if bold else QFont.Normal))
                 l.setStyleSheet(f"color:{color or fc}; background:transparent;")
-                l.setMinimumWidth(45)
+                l.setMinimumWidth(min_width)
                 return l
 
             def sep():
@@ -129,41 +133,45 @@ class FloatingWidget(QWidget):
             lbls = {}
 
             if self.cfg.get("show_name"):
-                lbls["name"] = make_lbl(fs - 1, color="#666666")
+                name_width = max(45, int(max_name_len * 7))
+                lbls["name"] = make_lbl(fs - 1, color="#666666", min_width=name_width)
                 row_layout.addWidget(lbls["name"])
                 row_layout.addWidget(sep())
 
             if self.cfg.get("show_code"):
-                lbls["code"] = make_lbl(fs - 1, color="#666666")
+                code_width = max(45, int(max_code_len * 7))
+                lbls["code"] = make_lbl(fs - 1, color="#666666", min_width=code_width)
                 row_layout.addWidget(lbls["code"])
                 row_layout.addWidget(sep())
 
-            lbls["price"] = make_lbl(fs, bold=True)
+            lbls["price"] = make_lbl(fs, bold=True, min_width=70)
             row_layout.addWidget(lbls["price"])
 
             if self.cfg.get("show_change_amt"):
                 row_layout.addWidget(sep())
-                lbls["change_amt"] = make_lbl(fs - 1)
+                lbls["change_amt"] = make_lbl(fs - 1, min_width=60)
                 row_layout.addWidget(lbls["change_amt"])
 
-            if self.cfg.get("show_change_pct"):
+            if self.cfg.get("show_change_pct") and not self.cfg.get("show_change_amt"):
+                # show_change_amt가 없을 때만 표시 (change_amt에 괄호로 포함되기 때문)
                 row_layout.addWidget(sep())
-                lbls["change_pct"] = make_lbl(fs - 1)
+                lbls["change_pct"] = make_lbl(fs - 1, min_width=55)
                 row_layout.addWidget(lbls["change_pct"])
 
             if self.cfg.get("show_profit_amt"):
                 row_layout.addWidget(sep())
-                lbls["profit_amt"] = make_lbl(fs - 1)
+                lbls["profit_amt"] = make_lbl(fs - 1, min_width=60)
                 row_layout.addWidget(lbls["profit_amt"])
 
-            if self.cfg.get("show_profit_pct"):
+            if self.cfg.get("show_profit_pct") and not self.cfg.get("show_profit_amt"):
+                # show_profit_amt가 없을 때만 표시 (profit_amt에 괄호로 포함되기 때문)
                 row_layout.addWidget(sep())
-                lbls["profit_pct"] = make_lbl(fs - 1)
+                lbls["profit_pct"] = make_lbl(fs - 1, min_width=55)
                 row_layout.addWidget(lbls["profit_pct"])
 
             if self.cfg.get("show_total"):
                 row_layout.addWidget(sep())
-                lbls["total"] = make_lbl(fs - 1)
+                lbls["total"] = make_lbl(fs - 1, min_width=70)
                 row_layout.addWidget(lbls["total"])
 
             row_layout.addStretch()
@@ -188,12 +196,12 @@ class FloatingWidget(QWidget):
             summary_layout.setContentsMargins(0, 2, 0, 0)
             summary_layout.setSpacing(10)
 
-            def make_s(bold=False, color=None):
+            def make_s(bold=False, color=None, min_width=80):
                 l = QLabel("--")
                 l.setFont(QFont("Malgun Gothic", fs,
                                 QFont.Bold if bold else QFont.Normal))
                 l.setStyleSheet(f"color:{color or fc}; background:transparent;")
-                l.setMinimumWidth(80)
+                l.setMinimumWidth(min_width)
                 return l
 
             def sep_s():
@@ -203,10 +211,10 @@ class FloatingWidget(QWidget):
                 s.setFixedWidth(12)
                 return s
 
-            self.lbl_sum_current = make_s(bold=True)
+            self.lbl_sum_current = make_s(bold=True, min_width=100)
             summary_layout.addWidget(self.lbl_sum_current)
             summary_layout.addWidget(sep_s())
-            self.lbl_sum_profit = make_s()
+            self.lbl_sum_profit = make_s(min_width=100)
             summary_layout.addWidget(self.lbl_sum_profit)
             summary_layout.addStretch()
             summary_widget.setLayout(summary_layout)
@@ -272,7 +280,11 @@ class FloatingWidget(QWidget):
             )
 
             if "change_amt" in lbls:
-                lbls["change_amt"].setText(f"{arrow} {change:+,.0f}")
+                change_text = f"{arrow} {change:+,.0f}"
+                # 금일 변동% 체크 시 괄호로 표기
+                if self.cfg.get("show_change_pct") and "change_pct" in lbls:
+                    change_text += f" ({change_pct:+.2f}%)"
+                lbls["change_amt"].setText(change_text)
                 lbls["change_amt"].setStyleSheet(s(c_col))
 
             if "change_pct" in lbls:
@@ -280,9 +292,11 @@ class FloatingWidget(QWidget):
                 lbls["change_pct"].setStyleSheet(s(c_col))
 
             if "profit_amt" in lbls:
-                lbls["profit_amt"].setText(
-                    f"{'+' if profit_amt >= 0 else ''}{int(profit_amt):,}원"
-                )
+                profit_text = f"{'+' if profit_amt >= 0 else ''}{int(profit_amt):,}원"
+                # 총액 변동% 체크 시 괄호로 표기
+                if self.cfg.get("show_profit_pct") and "profit_pct" in lbls:
+                    profit_text += f" ({profit_pct:+.2f}%)"
+                lbls["profit_amt"].setText(profit_text)
                 lbls["profit_amt"].setStyleSheet(s(p_col))
 
             if "profit_pct" in lbls:
@@ -330,11 +344,15 @@ class FloatingWidget(QWidget):
         self._apply_always_on_top()
         self._rebuild_rows()
         self.update_prices()
+        self.card.adjustSize()
+        self.resize(self.card.size())
 
     def apply_stocks(self, stocks):
         self.stocks = [s for s in stocks if s.get("active", True)]
         self._rebuild_rows()
         self.update_prices()
+        self.card.adjustSize()
+        self.resize(self.card.size())
 
     def mousePressEvent(self, e):
         if e.button() == Qt.LeftButton:
