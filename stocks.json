@@ -1,0 +1,18 @@
+[
+  {
+    "market": "KR",
+    "code": "055550",
+    "name": "신한지주",
+    "buy_price": 13000.0,
+    "quantity": 120,
+    "active": true
+  },
+  {
+    "market": "KR",
+    "code": "005930",
+    "name": "삼성전자",
+    "buy_price": 40000.0,
+    "quantity": 120,
+    "active": true
+  }
+]

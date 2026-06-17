@@ -1,0 +1,23 @@
+{
+  "bg_color": "#111111",
+  "bg_alpha": 210,
+  "font_size": 9,
+  "font_color": "#aaaaaa",
+  "use_change_color": false,
+  "invert_color": false,
+  "show_symbol": false,
+  "show_code": false,
+  "show_name": true,
+  "show_change_amt": true,
+  "show_change_pct": true,
+  "show_profit_amt": false,
+  "show_profit_pct": false,
+  "show_total": false,
+  "show_title": false,
+  "interval_ms": 10000,
+  "always_on_top": true,
+  "show_summary": false,
+  "show_summary_buy": false,
+  "show_summary_current": true,
+  "show_summary_profit": false
+}

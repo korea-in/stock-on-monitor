@@ -77,6 +77,24 @@ class FloatingWidget(QWidget):
 
         self.row_widgets = []
 
+        # 종목이 없는 경우 안내 메시지 표시
+        if not self.stocks:
+            empty_widget = QWidget()
+            empty_widget.setStyleSheet("background: transparent;")
+            empty_layout = QVBoxLayout()
+            empty_layout.setContentsMargins(12, 20, 12, 20)
+            empty_layout.setSpacing(0)
+
+            lbl_guide = QLabel("우클릭하여 종목을 설정해주세요.")
+            lbl_guide.setFont(QFont("Malgun Gothic", self.cfg.get("font_size", 9)))
+            lbl_guide.setStyleSheet(f"color:{self.cfg.get('font_color', '#aaaaaa')}; background:transparent;")
+            lbl_guide.setAlignment(Qt.AlignCenter)
+
+            empty_layout.addWidget(lbl_guide)
+            empty_widget.setLayout(empty_layout)
+            self.stock_layout.addWidget(empty_widget)
+            return
+
         for i, stock in enumerate(self.stocks):
             if i > 0:
                 line = QWidget()
@@ -95,15 +113,17 @@ class FloatingWidget(QWidget):
 
             def make_lbl(size, bold=False, color=None):
                 l = QLabel("--")
-                l.setFont(QFont("Malgun Gothic", size,
+                l.setFont(QFont("Malgun Gothic", fs,
                                 QFont.Bold if bold else QFont.Normal))
                 l.setStyleSheet(f"color:{color or fc}; background:transparent;")
+                l.setMinimumWidth(45)
                 return l
 
             def sep():
                 s = QLabel("|")
-                s.setFont(QFont("Malgun Gothic", fs - 1))
+                s.setFont(QFont("Malgun Gothic", fs))
                 s.setStyleSheet("color:#3a3a3a; background:transparent;")
+                s.setFixedWidth(12)
                 return s
 
             lbls = {}
@@ -118,7 +138,7 @@ class FloatingWidget(QWidget):
                 row_layout.addWidget(lbls["code"])
                 row_layout.addWidget(sep())
 
-            lbls["price"] = make_lbl(fs + 1, bold=True)
+            lbls["price"] = make_lbl(fs, bold=True)
             row_layout.addWidget(lbls["price"])
 
             if self.cfg.get("show_change_amt"):
@@ -146,6 +166,7 @@ class FloatingWidget(QWidget):
                 lbls["total"] = make_lbl(fs - 1)
                 row_layout.addWidget(lbls["total"])
 
+            row_layout.addStretch()
             row_widget.setLayout(row_layout)
             self.stock_layout.addWidget(row_widget)
             self.row_widgets.append(lbls)
@@ -169,38 +190,39 @@ class FloatingWidget(QWidget):
 
             def make_s(bold=False, color=None):
                 l = QLabel("--")
-                l.setFont(QFont("Malgun Gothic", fs - 1,
+                l.setFont(QFont("Malgun Gothic", fs,
                                 QFont.Bold if bold else QFont.Normal))
                 l.setStyleSheet(f"color:{color or fc}; background:transparent;")
+                l.setMinimumWidth(80)
                 return l
 
             def sep_s():
                 s = QLabel("|")
-                s.setFont(QFont("Malgun Gothic", fs - 1))
+                s.setFont(QFont("Malgun Gothic", fs))
                 s.setStyleSheet("color:#3a3a3a; background:transparent;")
+                s.setFixedWidth(12)
                 return s
 
-            # 매입총액 | 현재총액 | 손익
-            self.lbl_sum_buy     = make_s(color="#555555")   # 매입총액
-            self.lbl_sum_current = make_s(bold=True)          # 현재총액
-            self.lbl_sum_profit  = make_s()                   # 손익
-
-            summary_layout.addWidget(self.lbl_sum_buy)
-            summary_layout.addWidget(sep_s())
+            self.lbl_sum_current = make_s(bold=True)
             summary_layout.addWidget(self.lbl_sum_current)
             summary_layout.addWidget(sep_s())
+            self.lbl_sum_profit = make_s()
             summary_layout.addWidget(self.lbl_sum_profit)
-
+            summary_layout.addStretch()
             summary_widget.setLayout(summary_layout)
             self.stock_layout.addWidget(summary_widget)
         else:
-            # 합산 레이블 초기화 (update_prices 에서 참조 방지)
-            self.lbl_sum_buy     = None
             self.lbl_sum_current = None
             self.lbl_sum_profit  = None
 
     # ── 가격 갱신 ────────────────────────────────────
     def update_prices(self):
+        # 종목이 없으면 아무 것도 하지 않음
+        if not self.stocks:
+            self.card.adjustSize()
+            self.resize(self.card.size())
+            return
+
         total_buy     = 0  # 전체 매입총액
         total_current = 0  # 전체 현재총액
 
@@ -272,7 +294,7 @@ class FloatingWidget(QWidget):
                 lbls["total"].setStyleSheet(s(fc))
 
         # ── 합산 총 자산 갱신 ────────────────────────
-        if self.cfg.get("show_summary") and self.lbl_sum_buy:
+        if self.cfg.get("show_summary") and self.lbl_sum_current:
             total_profit = total_current - total_buy
             p_col = self._change_color(total_profit)
             fc    = self.cfg.get("font_color", "#aaaaaa")
@@ -280,18 +302,14 @@ class FloatingWidget(QWidget):
             def s(color):
                 return f"color:{color}; background:transparent;"
 
-            self.lbl_sum_buy.setText(f"매입 {int(total_buy):,}")
-            self.lbl_sum_buy.setStyleSheet(s("#555555"))
-
-            self.lbl_sum_current.setText(f"평가 {int(total_current):,}")
+            self.lbl_sum_current.setText(f"총 자산 {int(total_current):,}")
             self.lbl_sum_current.setStyleSheet(
                 s(p_col if self.cfg.get("use_change_color") else fc)
             )
 
             profit_pct = (total_profit / total_buy * 100) if total_buy > 0 else 0
             self.lbl_sum_profit.setText(
-                f"{'+' if total_profit >= 0 else ''}{int(total_profit):,}  "
-                f"({profit_pct:+.2f}%)"
+                f"총 손익 {('+' if total_profit >= 0 else '')}{int(total_profit):,}  ({profit_pct:+.2f}%)"
             )
             self.lbl_sum_profit.setStyleSheet(s(p_col))
 

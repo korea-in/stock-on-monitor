@@ -144,7 +144,6 @@ class SettingsDialog(QDialog):
         g3.setSpacing(6)
 
         checks = [
-            ("show_symbol",     "심볼"),
             ("show_code",       "종목코드"),
             ("show_name",       "종목명"),
             ("show_change_amt", "금일 변동액"),
@@ -166,18 +165,11 @@ class SettingsDialog(QDialog):
         # ── 합산 총 자산 ───────────────────────────────
         grp_sum = QGroupBox("합산 총 자산")
         g4 = QVBoxLayout()
-        self.chk_summary = QCheckBox(
-            "합산 총 자산 표시 (매입총액 | 평가총액 | 손익)"
-        )
+        self.chk_summary = QCheckBox("총 자산 및 수익 표시")
         self.chk_summary.setChecked(self.cfg.get("show_summary", False))
         g4.addWidget(self.chk_summary)
         grp_sum.setLayout(g4)
         layout.addWidget(grp_sum)
-
-        # ── 제목 표시 ──────────────────────────────────
-        self.chk_title = QCheckBox("플로팅 제목 표시")
-        self.chk_title.setChecked(self.cfg.get("show_title", False))
-        layout.addWidget(self.chk_title)
 
         # ── 하단 버튼 ──────────────────────────────────
         btn_row = QHBoxLayout()
@@ -200,7 +192,6 @@ class SettingsDialog(QDialog):
         self.cfg["always_on_top"]    = self.chk_always_on_top.isChecked()
         self.cfg["use_change_color"] = self.chk_use_color.isChecked()
         self.cfg["invert_color"]     = self.chk_invert.isChecked()
-        self.cfg["show_title"]       = self.chk_title.isChecked()
         self.cfg["show_summary"]     = self.chk_summary.isChecked()
         for key, chk in self.chk_map.items():
             self.cfg[key] = chk.isChecked()

@@ -31,22 +31,21 @@ def save_config(data_dir: str, cfg: dict):
 
 def default_config() -> dict:
     return {
-        "bg_color"        : "#111111",   # 검정에 가까운 어두운 배경
-        "bg_alpha"        : 210,          # 약간 투명
-        "font_size"       : 9,
-        "font_color"      : "#aaaaaa",   # 중간 회색
-        "use_change_color": True,
-        "invert_color"    : False,
-        "show_symbol"     : False,
-        "show_code"       : False,
-        "show_name"       : False,
-        "show_change_amt" : False,
-        "show_change_pct" : True,
-        "show_profit_amt" : True,
-        "show_profit_pct" : False,
-        "show_total"      : False,
-        "show_title"      : False,
-        "interval_ms"     : 10000,
+        "bg_color"           : "#111111",   # 검정에 가까운 어두운 배경
+        "bg_alpha"           : 210,          # 약간 투명
+        "font_size"          : 9,
+        "font_color"         : "#aaaaaa",   # 중간 회색
+        "use_change_color"   : True,
+        "invert_color"       : False,
+        "show_code"          : False,
+        "show_name"          : False,
+        "show_change_amt"    : False,
+        "show_change_pct"    : True,
+        "show_profit_amt"    : True,
+        "show_profit_pct"    : False,
+        "show_total"         : False,
+        "show_summary"       : False,
+        "interval_ms"        : 10000,
     }
 
 def load_stocks(data_dir: str) -> list:
@@ -63,24 +62,7 @@ def save_stocks(data_dir: str, stocks: list):
         json.dump(stocks, f, ensure_ascii=False, indent=2)
 
 def default_stocks() -> list:
-    return [
-        {
-            "market"   : "KR",
-            "code"     : "005930",
-            "name"     : "삼성전자",
-            "buy_price": 70000,
-            "quantity" : 10,
-            "active"   : True,
-        },
-        {
-            "market"   : "KR",
-            "code"     : "000660",
-            "name"     : "SK하이닉스",
-            "buy_price": 130000,
-            "quantity" : 5,
-            "active"   : True,
-        },
-    ]
+    return []
 
 def _exe_dir() -> str:
     if getattr(__import__("sys"), "frozen", False):

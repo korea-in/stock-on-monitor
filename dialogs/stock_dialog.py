@@ -80,6 +80,8 @@ class StockDialog(QDialog):
         self.data_dir       = data_dir
         self.stocks         = [s.copy() for s in stocks]
         self._search_result = None  # 검색 결과에서 선택된 종목
+        self._search_thread = None
+        self._old_search_threads = []
 
         self.setWindowTitle("종목 설정")
         self.setMinimumSize(640, 500)
@@ -129,8 +131,10 @@ class StockDialog(QDialog):
         input_row = QHBoxLayout()
         self.edit_buy = QLineEdit()
         self.edit_buy.setPlaceholderText("매수단가")
+        self.edit_buy.returnPressed.connect(self._add_stock)
         self.edit_qty = QLineEdit()
         self.edit_qty.setPlaceholderText("보유수량")
+        self.edit_qty.returnPressed.connect(self._add_stock)
         self.btn_add = QPushButton("추가")
         self.btn_add.setFixedWidth(60)
         self.btn_add.clicked.connect(self._add_stock)
@@ -145,13 +149,13 @@ class StockDialog(QDialog):
         # ── 저장된 종목 ───────────────────────────────
         main.addWidget(self._section_label("▸ 저장된 종목"))
 
-        self.tbl_stocks = QTableWidget(0, 5)
+        self.tbl_stocks = QTableWidget(0, 4)
         self.tbl_stocks.setHorizontalHeaderLabels(
-            ["시장", "코드", "종목명", "매수단가", "수량"]
+            ["코드", "종목명", "매수단가", "수량"]
         )
-        self.tbl_stocks.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self.tbl_stocks.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.tbl_stocks.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.tbl_stocks.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tbl_stocks.itemDoubleClicked.connect(self._on_stock_item_double_clicked)
         main.addWidget(self.tbl_stocks)
 
         # 하단 버튼
@@ -182,6 +186,10 @@ class StockDialog(QDialog):
 
     # ── 검색 ─────────────────────────────────────────
     def _search(self):
+        # 이전 검색 중인 스레드 결과는 무시하고, 새 검색을 시작합니다.
+        if self._search_thread is not None and self._search_thread.isRunning():
+            self._old_search_threads.append(self._search_thread)
+
         query  = self.edit_search.text().strip()
         market = "KR" if self.cmb_market.currentIndex() == 0 else "US"
         if not query:
@@ -196,11 +204,18 @@ class StockDialog(QDialog):
         item.setBackground(QColor("#1a1a1a"))
         self.tbl_search.setItem(0, 0, item)
 
-        self._search_thread = SearchThread(market, query)
-        self._search_thread.result.connect(self._on_search_result)
-        self._search_thread.start()
+        thread = SearchThread(market, query)
+        thread.result.connect(self._on_search_result)
+        thread.finished.connect(self._cleanup_search_thread)
+        thread.finished.connect(thread.deleteLater)
+        self._search_thread = thread
+        thread.start()
 
     def _on_search_result(self, results: list):
+        # 이전 검색 결과는 무시합니다.
+        if self.sender() is not self._search_thread:
+            return
+
         # span 초기화
         self.tbl_search.setSpan(0, 0, 1, 1)
         self.tbl_search.clearContents()
@@ -233,6 +248,13 @@ class StockDialog(QDialog):
         if len(results) == 1:
             self._search_result = results[0]
             self.tbl_search.selectRow(0)
+
+    def _cleanup_search_thread(self):
+        sender = self.sender()
+        if sender is self._search_thread:
+            self._search_thread = None
+        elif sender in self._old_search_threads:
+            self._old_search_threads.remove(sender)
 
     def _on_search_row_clicked(self, item):
         """검색 결과 행 클릭 시 해당 종목 선택"""
@@ -289,11 +311,6 @@ class StockDialog(QDialog):
 
     # ── 종목 삭제 ─────────────────────────────────────
     def _delete_selected(self):
-        # 1건 이하 삭제 방어
-        if len(self.stocks) <= 1:
-            QMessageBox.warning(self, "삭제 불가", "최소 1개 종목은 유지해야 합니다.")
-            return
-
         rows = sorted(
             set(i.row() for i in self.tbl_stocks.selectedItems()), reverse=True
         )
@@ -320,15 +337,51 @@ class StockDialog(QDialog):
         self.tbl_stocks.setRowCount(len(self.stocks))
         for i, s in enumerate(self.stocks):
             for col, val in enumerate([
-                s["market"], s["code"], s["name"],
+                s["code"], s["name"],
                 f"{s['buy_price']:,.0f}", str(s["quantity"])
             ]):
                 item = QTableWidgetItem(val)
                 item.setBackground(QColor("#1a1a1a"))
                 item.setForeground(QColor("#aaaaaa"))
+                # 종목명(1), 매수단가(2), 수량(3)은 편집 가능
+                if col in [1, 2, 3]:
+                    item.setFlags(item.flags() | Qt.ItemIsEditable)
+                else:
+                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                 self.tbl_stocks.setItem(i, col, item)
 
+    def _on_stock_item_double_clicked(self, item):
+        """테이블 아이템 더블클릭 시 편집 모드 활성화"""
+        if item.column() in [1, 2, 3]:  # 종목명, 매수단가, 수량만 편집 가능
+            self.tbl_stocks.editItem(item)
+
     def _save(self):
+        # 테이블의 변경사항을 self.stocks에 반영
+        for i in range(self.tbl_stocks.rowCount()):
+            if i < len(self.stocks):
+                # 종목명 수정
+                name_item = self.tbl_stocks.item(i, 1)
+                if name_item:
+                    self.stocks[i]["name"] = name_item.text()
+                
+                # 매수단가 수정
+                buy_item = self.tbl_stocks.item(i, 2)
+                if buy_item:
+                    try:
+                        self.stocks[i]["buy_price"] = float(buy_item.text().replace(",", ""))
+                    except ValueError:
+                        pass
+                
+                # 수량 수정
+                qty_item = self.tbl_stocks.item(i, 3)
+                if qty_item:
+                    try:
+                        self.stocks[i]["quantity"] = int(qty_item.text().replace(",", ""))
+                    except ValueError:
+                        pass
+        
         save_stocks(self.data_dir, self.stocks)
+        self._refresh_table()
+        self._update_del_btn()
         self.stocks_updated.emit(self.stocks)
         QMessageBox.information(self, "저장 완료", "종목 정보가 저장되었습니다.")

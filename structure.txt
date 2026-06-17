@@ -24,4 +24,8 @@ stock_floating/
    → 설치 경로의 main.exe 자동 실행
    → installer.exe 종료
 
-# pyinstaller --onedir main.py -n stock-on-monitor
+# 1. dist 폴더에 stock-on-monitor.exe 준비
+pyinstaller --onefile --noconsole -n stock-on-monitor main.py
+
+# 2. PyInstaller로 installer.exe 빌드
+pyinstaller --onefile --add-data "dist/stock-on-monitor.exe:." --noconsole -n stock-on-monitor-installer installer.py
