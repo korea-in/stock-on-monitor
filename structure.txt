@@ -13,13 +13,15 @@ stock_floating/
     ├── fetcher.py       # 주식 데이터 조회
     └── constants.py     # 상수 정의
 
-1. pyinstaller로 main.exe 빌드
-2. pyinstaller --add-data로 main.exe 내장해서 installer.exe 빌드
-3. 사용자는 installer.exe 하나만 받으면 됨
+1. pyinstaller로 stock-on-monitor.exe 빌드
+2. pyinstaller --add-data로 stock-on-monitor 내장해서 stock-on-monitor-installer.exe 빌드
+3. 사용자는 stock-on-monitor-installer.exe 하나만 받으면 됨
 4. installer.exe 실행
-   → 설치 경로 지정 (예: C:\Program Files\StockFloat\)
+   → 설치 경로 지정 (예: C:\Program Files\StockOnMonitor\)
    → main.exe를 해당 경로에 복사
    → config.json, stocks.json 생성
    → 바로가기 생성
    → 설치 경로의 main.exe 자동 실행
    → installer.exe 종료
+
+# pyinstaller --onedir main.py -n stock-on-monitor
